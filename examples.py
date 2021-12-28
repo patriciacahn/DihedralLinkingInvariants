@@ -21,8 +21,12 @@ print(colorlist)
 
 
 arrowlists=createarrowlists(p,colorlist,overstrands)
+#print('The arrow lists are',arrowlists)
 vertexlists=createvertexlists(p,colorlist,overstrands)
+#print('The vertex lists are',vertexlists)
 for j in range(q):
     for k in range(q):
         print('Intersection number of K^j, j=', j, 'with Sigma^k, k=',k )
         print(intKjSigmak(j, k, p, overstrands, signlist, arrowlists, vertexlists))
+        
+ 

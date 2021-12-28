@@ -1,9 +1,25 @@
+# Compute the dihedral linking numbers of a p-colorable knot
+# Last edited 12/28/21 by Patricia Cahn
+# Based on the program dihedrallinking.py developed with Elise Catania, Sarangoo Chimgee, Olivia Del Guercio, Jack Kendrick
+# at https://github.com/delguercio/pyknot
 
-def reflect(i,j,p):
-    #reflect vertex i over line through j on p gon
+from sympy import *
+
+
+#reflect vertex i over line through vertex j on p-gon, return resulting vertex
+def reflect(i,j,p):    
     s=(2*j-i)%p
     return s
 
+#arrowlists[i] is a list of arrows in the configuration diagram at crossing i
+# [head,tail]
+
+#Example:
+#arrowlists=[[[0,0],[4,1],[3,2]],
+#            [[2,2],[3,1],[4,0]],
+#            [[1,1],[0,2],[4,3]],
+#            [[4,4],[0,3],[1,2]]
+#            ]
 
 def createarrowlists(myp,mycolorlist,myoverstrands):
     n=len(mycolorlist)
@@ -12,7 +28,8 @@ def createarrowlists(myp,mycolorlist,myoverstrands):
     v=mycolorlist[0]
     for i in range(myq):
         vertices.append(v)
-        v=(v+1)%myp    
+        v=(v+1)%myp
+   
     myinitiallist=[]
     for i  in vertices:
         myinitiallist.append([reflect(i,mycolorlist[0],myp),i])
@@ -25,6 +42,14 @@ def createarrowlists(myp,mycolorlist,myoverstrands):
         myarrowlists.append(newlist)    
     return  myarrowlists
 
+#vertexlists is another way of storing the configuration diagram, and is equivalent to the arrow list
+#for each vertex v, the first entry is the index i such that arr_i  is indicdent to v, h if head, t if tail, c if loop
+
+#vertexlists=[[[0,'c'],[1,'h'],[2,'h'],[2,'t'],[1,'t']],
+#             [[2,'h'],[1,'h'],[0,'c'],[1, 't'],[2,'t']],
+#             [[1,'t'],[0,'c'],[1,'h'],[2,'h'],[2,'t']],
+#             [[1,'t'],[2,'t'],[2,'h'],[1,'h'],[0,'c']]
+#             ]
 
 def createvertexlists(myp,mycolorlist,myoverstrands):
 
@@ -36,7 +61,7 @@ def createvertexlists(myp,mycolorlist,myoverstrands):
         myvertexlists.append(arrowtovertexlist(myp,myarrowlists[i]))
     return myvertexlists
 
-
+#convert from the arrow list to the vertex list
 def arrowtovertexlist(myp,myarrowlist) :
     myq=int((myp+1)/2) %myp
     myvertexlist=[ [ 0 for i in range(2) ] for j in range(myp) ]
@@ -53,17 +78,19 @@ def arrowtovertexlist(myp,myarrowlist) :
             myvertexlist[head][1]='h'
     return myvertexlist
 
+#above is the function a(i,j) in the paper
 def above(i,j,myp,myoverstrands,myarrowlists,myvertexlists):
     s= myvertexlists[myoverstrands[i]][myarrowlists[i][j][1]][0]
     return s
 
+#below is the function b(i,j) in the paper
 def below(i,j,myp,myoverstrands,myarrowlists,myvertexlists):
     s= myvertexlists[myoverstrands[i]][myarrowlists[i][j][0]][0]
     return s
 
 def epsilona(i,j,myp,myoverstrands,myarrowlists,myvertexlists):
     a=above(i,j,myp,myoverstrands,myarrowlists,myvertexlists)
-    if myarrowlists[i][j][1]==myarrowlists[myoverstrands[i]][a][1] and a!=0:       
+    if myarrowlists[i][j][1]==myarrowlists[myoverstrands[i]][a][1] and a!=0:
         return 1
     elif myarrowlists[i][j][1]==myarrowlists[myoverstrands[i]][a][0] and a!=0:
         return -1
@@ -98,7 +125,8 @@ def Cb(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists) :
         return mysignlist[i]
     else:
         return 0 
-    
+
+#matrix2chain(k,...) returns a matrix whose solutions correspond to rational 2-chains bounding the k^th branch curve 
 def matrix2chain(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
     n=len(myoverstrands)
     myq=int((myp+1)/2) %myp
@@ -118,12 +146,11 @@ def matrix2chain(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
                 M[(myq-1)*i+j-1][n*(a-1)+myoverstrands[i]]+=-epsa
             if b!=0:
                 M[(myq-1)*i+j-1][n*(b-1)+myoverstrands[i]]+=-epsb
-            M[(myq-1)*i+j-1][dim]+=-ca-cb
-            
-    
-            
+            M[(myq-1)*i+j-1][dim]+=-ca-cb                            
     return M
 
+#coeflist(k,...) returns a list of coefficients which describe a rational 2-chain Sigma_k bounding the k^th branch curve
+#if no such 2-chain exists, coeflist returns the list ['x',...,'x']
 def coeflist(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
     n=len(myoverstrands)
     myq=int((myp+1)/2) %myp
@@ -133,24 +160,45 @@ def coeflist(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
     R=M.rref()
     pivots=list(R[1])
     R=R[0]
-    constants=R.col(dim).tolist()
-    coefs=[0 for x in range(dim)]
-    for x in range(len(pivots)):
-      coefs[pivots[x]]=constants[x][0]
+    constants=R.col(dim).tolist()        
+    if pivots[len(pivots)-1]==dim: #there is no solution
+        coefs=['x' for x in range(dim)]
+    else :
+        coefs=[0 for x in range(dim)] #there is  a solution    
+        for x in range(len(pivots)):
+            coefs[pivots[x]]=constants[x][0]
     return coefs
-from sympy import *
-
+           
+#intKjSigmak computes the intersection number of the branch curve K^j with a 2-chain Sigma_k bounding the k^th branch curve,
+#i.e., the linking number lk(K^j,K^k)
+#if no such 2-chain exists, returns lk='x'
 def intKjSigmak(j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
     n=len(mysignlist)
     coefs=coeflist(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists)
-    lk=0
-    for i in range(n):
-        a=above(i, j, myp, myoverstrands, myarrowlists, myvertexlists)
-        if a!=0:           
-            lk+=epsilona(i, j, myp, myoverstrands, myarrowlists, myvertexlists)*coefs[(a-1)*n+myoverstrands[i]]
-        lk+=-Ca(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists)
+    if coefs[0]=='x':
+        lk='x'
+    else:    
+        lk=0
+        for i in range(n):
+            a=above(i, j, myp, myoverstrands, myarrowlists, myvertexlists)
+            if a!=0:
+                lk+=epsilona(i, j, myp, myoverstrands, myarrowlists, myvertexlists)*coefs[(a-1)*n+myoverstrands[i]]
+            lk+=-Ca(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists)
     return lk
 
+#returns a matrix of linking numbers of all lifts lk(K^j,K^k)
+#the diagonal entries are self-linking numbers and are not part of the dihedral linking invariant
+def DLNmatrix(myp,myoverstrands,mysignlist,mycolorlist):  
+    myq=int((myp+1)/2)% myp
+    dlnmatrix=[[ 0 for i in range(myq)] for j in range(myq)]
+    arrowlists=createarrowlists(myp,mycolorlist,myoverstrands)
+    vertexlists=createvertexlists(myp,mycolorlist,myoverstrands)
+    for j in range(myq):
+        for k in range(myq):
+            dlnmatrix[j][k]=intKjSigmak(j, k, myp, myoverstrands, mysignlist, arrowlists, vertexlists)
+    return dlnmatrix
+
+#intersectionlist returns the contributions to the linking number lk(K^j,K^k) crossing by crossing
 def intersectionlist(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists):
     n=len(mysignlist)
     coefs=coeflist(k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists)
@@ -161,5 +209,3 @@ def intersectionlist(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexli
         intersection+=epsilona(i, j, myp, myoverstrands, myarrowlists, myvertexlists)*coefs[(a-1)*n+myoverstrands[i]]
     intersection+=-Ca(i,j,k,myp,myoverstrands,mysignlist, myarrowlists,myvertexlists)
     return intersection
-
-
